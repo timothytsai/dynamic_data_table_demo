@@ -8,6 +8,8 @@ This demo is an R Shiny web app that illustrates how to create a DataTable
 (from the DT library) with columns that can be selected dynamically from user
 input.
 
+Try it out at https://timtsai.shinyapps.io/dynamic_data_table_demo/.
+
 # Setup
 This app uses the `shiny`, `dplyr`, and `DT` R packages.  Use 
 `install.packages(c("shiny", "dplyr", "DT"))` to install.
