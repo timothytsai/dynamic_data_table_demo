@@ -96,6 +96,9 @@ img {
 button.code-folding-btn:focus {
   outline: none;
 }
+summary {
+  display: list-item;
+}
 </style>
 
 
@@ -103,14 +106,74 @@ button.code-folding-btn:focus {
 <div class="container-fluid main-container">
 
 <!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
 <script>
 $(document).ready(function () {
   window.buildTabsets("TOC");
 });
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
 </script>
 
 <!-- code folding -->
-
 
 
 
@@ -124,8 +187,52 @@ $(document).ready(function () {
 </div>
 
 
-<p>Let’s say you have a very wide dataset and you want to make this data available for display.</p>
-<p>This demo illustrates how to create a DataTable (from the DT library) with columns that can be selected dynamically from user input.</p>
+<div id="dynamic-datatable-demo" class="section level1">
+<h1>Dynamic DataTable Demo</h1>
+<p>Let’s say you have a very wide dataset and you want to make this data available for display in a web app. With a very wide table, the user will have to scroll across the page, potentially losing track of the information on the far left, which is typically where indexing columns are positions (i.e., record ID).</p>
+<p>This demo is an R Shiny web app that illustrates how to create a DataTable (from the DT library) with columns that can be selected dynamically from user input.</p>
+</div>
+<div id="setup" class="section level1">
+<h1>Setup</h1>
+<p>This app uses the <code>shiny</code>, <code>dplyr</code>, and <code>DT</code> R packages. Use <code>install.packages(c(&quot;shiny&quot;, &quot;dplyr&quot;, &quot;DT&quot;))</code> to install.</p>
+</div>
+<div id="walkthrough" class="section level1">
+<h1>Walkthrough</h1>
+<p>We’ll go over the basic structure of the app and how it works.</p>
+<div id="structure" class="section level2">
+<h2>Structure</h2>
+<p>The app is structured using the <code>app.R</code> format, where the app is contained in a single file. The UI is defined with a code block:</p>
+<pre><code>ui &lt;- fluidPage(
+...
+)</code></pre>
+<p>And the server code with:</p>
+<pre><code>server &lt;- function(input, output){
+...
+}</code></pre>
+<p>Finally, there is a call to <code>shinyApp</code> which creates the the app object and returns it:</p>
+<pre><code>shinyApp(ui, server)</code></pre>
+</div>
+<div id="ui" class="section level2">
+<h2>UI</h2>
+<p>We are using the <code>fluidPage()</code> layout with a title panel (<code>titlePanel()</code>) and a main panel (<code>mainPanel()</code>).</p>
+<p>In the UI code block, you will see three function calls:</p>
+<ul>
+<li><code>h3()</code> - a shiny HTML helper function which tags text within it as a third-level heading</li>
+<li><code>uiOutput()</code> - renders a UI element created by <code>renderUI()</code> in the server code</li>
+<li><code>dataTableOutput()</code> - creates a container for our DataTable which is created in the server code by <code>renderDataTable()</code></li>
+</ul>
+</div>
+<div id="server" class="section level2">
+<h2>Server</h2>
+<p>In the server code, we are first creating some objects (<code>dynamic_select_preset</code> and <code>data_colnames</code>) to make our code a little more flexible. If we want to change our presets, it’s easier to change these objects than to find each occurrence and change them one by one. We also save our data set (the <code>dplyr::starwars</code> dataset) to its own object.</p>
+<p>To create the selection field UI element, we call the <code>selectizeInput()</code> function wrapped in <code>renderUI()</code>, setting the available choices as the column names of our dataset and the selected columns as the presets we defined earlier.</p>
+<p>Because these parameters are their own objects rather than being hard coded, it’s easier change them or have them be passed from another function or element of the app.</p>
+<p>Finally, we render our <code>DataTable</code> with the <code>renderDataTable()</code> function. Since the result of this function call depends on a reactive element - <code>dynamic_select</code>, we need to use the <code>req()</code> function to make sure that value is available before proceeding with the rest of the function.</p>
+<p>Next, we use the <code>dynamic_select</code> input to index the columns we want to appear in the table and, by the negation operation, the columns we don’t want to appear. These are declared explicitly so that we can work with these values later, if desired (e.g., formatting column names).</p>
+<p>We subtract 1 from the index vector <code>not_visible_targets</code> because with <code>rownames = FALSE</code>, the DataTable will be zero-indexed.</p>
+<p>The call to create the datatable is relatively straightforward. The piece of this code which hides the is the <code>columnDefs</code>, setting <code>visible = FALSE</code> with the targets of <code>not_visible_targets</code> which we saved before.</p>
+</div>
+</div>
 
 
 

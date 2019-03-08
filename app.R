@@ -1,19 +1,14 @@
 library(shiny)
-library(tidyverse)
+library(dplyr)
 library(DT)
 
 ui <- fluidPage(
   titlePanel("Dynamic DataTable Demo"),
-  sidebarLayout(
-    sidebarPanel(
-      "column select styles",
-      uiOutput("checkbox_select"),
-      uiOutput("dynamic_select")
-    ),
-    mainPanel(
-      "data",
-      dataTableOutput("table")
-    )
+  mainPanel(
+    h3("column selection"),
+    uiOutput("dynamic_select"),
+    h3("DataTable"),
+    dataTableOutput("table")
   )
 )
 
@@ -21,48 +16,38 @@ server <- function(input, output) {
   
   dynamic_select_preset <- c("name", "gender", "species", "homeworld", "films")
   
-  output$checkbox_select <- renderUI({
-    checkboxGroupInput(
-      "checkbox_select", 
-      label = "one option, checkboxes",
-      choices = colnames(dplyr::starwars)
-    )
-  })
+  table_data <- dplyr::starwars
+  
+  data_colnames <- colnames(table_data)
   
   output$dynamic_select <- renderUI({
     selectizeInput(
-      "dynamic_select", "second option, selectizeInput",
-      choices = colnames(dplyr::starwars),
+      "dynamic_select", "selectizeInput",
+      choices = data_colnames,
       selected = dynamic_select_preset,
-      multiple = TRUE)
-  })
-  
-  reactive_table_data <- reactive({
-    req(input$dynamic_select)
-    
-    tmp <- dplyr::starwars
-    
-    return(tmp)
+      multiple = TRUE
+    )
   })
   
   output$table <- DT::renderDataTable({
-    req(
-      reactive_table_data(),
-      input$dynamic_select
-      )
+    req(input$dynamic_select)
     
-    visible_columns <- colnames(reactive_table_data())[which(colnames(reactive_table_data()) %in% input$dynamic_select)]
-    not_visible_targets <- which(!colnames(reactive_table_data()) %in% visible_columns) - 1
+    visible_columns <- data_colnames[which(data_colnames %in% input$dynamic_select)]
+    not_visible_targets <- which(!data_colnames %in% visible_columns) - 1
     
     DT::datatable(
-      reactive_table_data(),
+      table_data,
+      rownames = FALSE,
+      filter = "top",
       options = list(
         columnDefs = list(
           list(
             visible = FALSE, 
             targets = not_visible_targets
           )
-        )
+        ),
+        dom = "Blfrtip",
+        searchHighlight = TRUE
       )
     )
   })
